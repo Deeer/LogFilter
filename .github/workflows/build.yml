@@ -11,6 +11,8 @@ jobs:
     
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
     
     - name: 设置 Python
       uses: actions/setup-python@v4
@@ -22,12 +24,43 @@ jobs:
         python -m pip install --upgrade pip
         pip install pyqt5 pyperclip pyinstaller
     
+    - name: 生成版本号
+      id: version
+      run: |
+        $date = Get-Date -Format "yyyyMMdd"
+        $buildNumber = $env:GITHUB_RUN_NUMBER
+        $version = "v1.0.$date.$buildNumber"
+        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+        echo "生成版本号: $version"
+    
     - name: 使用 PyInstaller 构建
       run: |
-        pyinstaller --onefile --windowed --add-data "keywords.txt;." --name "日志搜索工具" log_search_tool.py
+        pyinstaller --onefile --windowed --add-data "keywords.txt;." --name "日志搜索工具_${{ steps.version.outputs.VERSION }}" log_search_tool.py
     
     - name: 上传构建结果
       uses: actions/upload-artifact@main
       with:
         name: 日志搜索工具
-        path: dist/日志搜索工具.exe
+        path: dist/日志搜索工具_${{ steps.version.outputs.VERSION }}.exe
+    
+    - name: 创建 Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.version.outputs.VERSION }}
+        name: 日志搜索工具 ${{ steps.version.outputs.VERSION }}
+        draft: false
+        prerelease: false
+        files: dist/日志搜索工具_${{ steps.version.outputs.VERSION }}.exe
+        body: |
+          # 日志搜索工具 ${{ steps.version.outputs.VERSION }}
+          
+          构建时间: ${{ github.event.repository.updated_at }}
+          
+          ## 功能
+          - 支持多种编码格式的日志文件
+          - 支持预设关键词和自定义关键词搜索
+          - 支持拖放文件
+          - 支持复制搜索结果到剪贴板
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
