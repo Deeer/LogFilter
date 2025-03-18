@@ -22,14 +22,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install pyqt5 pyperclip pyinstaller
     
-    - name: 创建预置关键词文件
-      run: |
-        echo "error" > keywords.txt
-        echo "warning" >> keywords.txt
-        echo "info" >> keywords.txt
-        echo "exception" >> keywords.txt
-        echo "fail" >> keywords.txt
-    
     - name: 使用 PyInstaller 构建
       run: |
         pyinstaller --onefile --windowed --add-data "keywords.txt;." --name "日志搜索工具" log_search_tool.py
