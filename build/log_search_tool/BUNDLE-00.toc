@@ -1,0 +1,1 @@
+([('日志搜索工具', '/Users/dee/Documents/Side/dist/日志搜索工具', 'EXECUTABLE')],)
