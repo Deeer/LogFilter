@@ -5,10 +5,14 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+# 添加权限配置
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     runs-on: windows-latest
-    
+     
     steps:
     - uses: actions/checkout@v3
       with:

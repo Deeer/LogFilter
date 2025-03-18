@@ -4,7 +4,8 @@ import codecs
 import pyperclip
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QPushButton, QLabel, QComboBox, 
-                            QLineEdit, QTextEdit, QFileDialog, QMessageBox)
+                            QLineEdit, QTextEdit, QFileDialog, QMessageBox,
+                            QDialog, QListWidget)  # 添加 QDialog 和 QListWidget
 from PyQt5.QtCore import Qt, QMimeData
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent
 
@@ -35,8 +36,99 @@ def load_keywords():
     
     return keywords
 
+# 保存关键词到文件
+def save_keywords(keywords):
+    try:
+        # 尝试保存到资源路径
+        keywords_path = resource_path("keywords.txt")
+        
+        # 如果在打包环境中，则保存到用户目录
+        if hasattr(sys, '_MEIPASS'):
+            home_dir = os.path.expanduser("~")
+            app_dir = os.path.join(home_dir, ".log_search_tool")
+            os.makedirs(app_dir, exist_ok=True)
+            keywords_path = os.path.join(app_dir, "keywords.txt")
+        
+        with open(keywords_path, 'w', encoding='utf-8') as f:
+            for keyword in keywords:
+                f.write(f"{keyword}\n")
+        return True, keywords_path
+    except Exception as e:
+        return False, str(e)
+
 # 预设关键词
 PRESET_KEYWORDS = load_keywords()
+
+class KeywordDialog(QDialog):
+    def __init__(self, parent=None, keywords=None):
+        super().__init__(parent)
+        self.keywords = keywords or []
+        self.initUI()
+        
+    def initUI(self):
+        self.setWindowTitle('编辑关键词')
+        self.setGeometry(300, 300, 400, 300)
+        
+        layout = QVBoxLayout()
+        
+        # 关键词列表
+        self.keyword_list = QListWidget()
+        for keyword in self.keywords:
+            self.keyword_list.addItem(keyword)
+        
+        # 编辑区域
+        edit_layout = QHBoxLayout()
+        self.keyword_edit = QLineEdit()
+        self.keyword_edit.setPlaceholderText('输入关键词')
+        
+        self.add_button = QPushButton('添加')
+        self.add_button.clicked.connect(self.add_keyword)
+        
+        self.remove_button = QPushButton('删除')
+        self.remove_button.clicked.connect(self.remove_keyword)
+        
+        edit_layout.addWidget(self.keyword_edit)
+        edit_layout.addWidget(self.add_button)
+        edit_layout.addWidget(self.remove_button)
+        
+        # 按钮区域
+        button_layout = QHBoxLayout()
+        self.save_button = QPushButton('保存')
+        self.save_button.clicked.connect(self.accept)
+        
+        self.cancel_button = QPushButton('取消')
+        self.cancel_button.clicked.connect(self.reject)
+        
+        button_layout.addWidget(self.save_button)
+        button_layout.addWidget(self.cancel_button)
+        
+        # 添加所有布局
+        layout.addWidget(QLabel('关键词列表:'))
+        layout.addWidget(self.keyword_list)
+        layout.addLayout(edit_layout)
+        layout.addLayout(button_layout)
+        
+        self.setLayout(layout)
+    
+    def add_keyword(self):
+        keyword = self.keyword_edit.text().strip()
+        if keyword and keyword not in self.keywords:
+            self.keywords.append(keyword)
+            self.keyword_list.addItem(keyword)
+            self.keyword_edit.clear()
+    
+    def remove_keyword(self):
+        selected_items = self.keyword_list.selectedItems()
+        if not selected_items:
+            return
+            
+        for item in selected_items:
+            keyword = item.text()
+            self.keywords.remove(keyword)
+            self.keyword_list.takeItem(self.keyword_list.row(item))
+    
+    def get_keywords(self):
+        return self.keywords
 
 class LogSearchTool(QMainWindow):
     def __init__(self):
@@ -84,10 +176,15 @@ class LogSearchTool(QMainWindow):
         self.search_button = QPushButton('搜索')
         self.search_button.clicked.connect(self.search_log)
         
+        # 添加编辑关键词按钮
+        self.edit_keywords_button = QPushButton('编辑关键词')
+        self.edit_keywords_button.clicked.connect(self.edit_keywords)
+        
         keyword_layout.addWidget(self.keyword_label)
         keyword_layout.addWidget(self.keyword_combo)
         keyword_layout.addWidget(self.custom_keyword)
         keyword_layout.addWidget(self.search_button)
+        keyword_layout.addWidget(self.edit_keywords_button)
         
         # 结果显示区域
         self.result_text = QTextEdit()
@@ -196,6 +293,30 @@ class LogSearchTool(QMainWindow):
             QMessageBox.information(self, "提示", "搜索结果已复制到剪贴板")
         else:
             QMessageBox.warning(self, "警告", "没有可复制的搜索结果")
+
+    def edit_keywords(self):
+        global PRESET_KEYWORDS  # 将全局声明移到函数开头
+        dialog = KeywordDialog(self, PRESET_KEYWORDS.copy())
+        if dialog.exec_() == QDialog.Accepted:
+            PRESET_KEYWORDS = dialog.get_keywords()
+            
+            # 更新下拉框
+            current_text = self.keyword_combo.currentText()
+            self.keyword_combo.clear()
+            self.keyword_combo.addItems(PRESET_KEYWORDS)
+            self.keyword_combo.addItem("自定义...")
+            
+            # 尝试恢复之前的选择
+            index = self.keyword_combo.findText(current_text)
+            if index >= 0:
+                self.keyword_combo.setCurrentIndex(index)
+            
+            # 保存关键词
+            success, message = save_keywords(PRESET_KEYWORDS)
+            if success:
+                QMessageBox.information(self, "成功", f"关键词已保存到: {message}")
+            else:
+                QMessageBox.warning(self, "警告", f"保存关键词失败: {message}")
 
 def main():
     app = QApplication(sys.argv)
