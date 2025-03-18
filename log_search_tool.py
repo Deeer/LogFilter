@@ -596,8 +596,9 @@ class LogSearchTool(QMainWindow):
                        line == ""):
                     matched_lines.append(line)
             
-            # 将匹配的日志内容合并为一个字符串
-            clipboard_content = "\n".join(matched_lines)
+            # 将匹配的日志内容合并为一个字符串，确保保留换行格式
+            # 使用双换行符来保持隔行显示的格式
+            clipboard_content = "\n\n".join(matched_lines)
             
             if clipboard_content:
                 pyperclip.copy(clipboard_content)
