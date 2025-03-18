@@ -8,12 +8,35 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt5.QtCore import Qt, QMimeData
 from PyQt5.QtGui import QDragEnterEvent, QDropEvent
 
+# 获取资源文件路径的辅助函数
+def resource_path(relative_path):
+    """ 获取资源的绝对路径 """
+    try:
+        # PyInstaller创建临时文件夹并将路径存储在_MEIPASS中
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    
+    return os.path.join(base_path, relative_path)
+
+# 从文件加载预设关键词
+def load_keywords():
+    keywords = ["error", "warning", "info"]  # 默认关键词
+    
+    try:
+        keywords_path = resource_path("keywords.txt")
+        if os.path.exists(keywords_path):
+            with open(keywords_path, 'r', encoding='utf-8') as f:
+                loaded_keywords = [line.strip() for line in f if line.strip()]
+                if loaded_keywords:
+                    keywords = loaded_keywords
+    except Exception as e:
+        print(f"加载关键词文件时出错: {e}")
+    
+    return keywords
+
 # 预设关键词
-PRESET_KEYWORDS = [
-    "error",
-    "warning",
-    "info"
-]
+PRESET_KEYWORDS = load_keywords()
 
 class LogSearchTool(QMainWindow):
     def __init__(self):
