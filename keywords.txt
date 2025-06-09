@@ -3,4 +3,3 @@ warning
 info
 exception
 fail
-asda

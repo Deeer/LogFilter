@@ -25,7 +25,17 @@ def load_keywords():
     keywords = ["error", "warning", "info"]  # 默认关键词
     
     try:
+        # 首先尝试从资源路径加载
         keywords_path = resource_path("keywords.txt")
+        
+        # 如果在打包环境中，也尝试从用户目录加载
+        if hasattr(sys, '_MEIPASS'):
+            home_dir = os.path.expanduser("~")
+            app_dir = os.path.join(home_dir, ".log_search_tool")
+            user_keywords_path = os.path.join(app_dir, "keywords.txt")
+            if os.path.exists(user_keywords_path):
+                keywords_path = user_keywords_path
+        
         if os.path.exists(keywords_path):
             with open(keywords_path, 'r', encoding='utf-8') as f:
                 loaded_keywords = [line.strip() for line in f if line.strip()]
